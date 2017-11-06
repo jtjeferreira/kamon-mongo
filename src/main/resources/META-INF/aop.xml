@@ -1,0 +1,12 @@
+<!DOCTYPE aspectj PUBLIC "-//AspectJ//DTD//EN" "http://www.eclipse.org/aspectj/dtd/aspectj.dtd">
+
+<aspectj>
+  <aspects>
+    <aspect name="kamon.mongo.instrumentation.Instrumentation2"/>
+  </aspects>
+
+    <weaver options="-Xset:weaveJavaPackages=false,weaveJavaxPackages=false">
+        <include within="kamon.mongo.instrumentation..*"/>
+        <include within="reactivemongo..*"/>
+   </weaver>
+</aspectj>
