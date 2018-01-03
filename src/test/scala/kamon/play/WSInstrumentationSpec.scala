@@ -30,7 +30,8 @@ import reactivemongo.api.collections.bson.BSONCollection
 import reactivemongo.bson.BSONDocument
 
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.Future
+import scala.concurrent.duration.Duration
+import scala.concurrent.{Await, Future}
 
 
 class WSInstrumentationSpec extends WordSpec with MustMatchers
@@ -47,8 +48,8 @@ class WSInstrumentationSpec extends WordSpec with MustMatchers
   import reactivemongo.api._
 
   val driver = MongoDriver.apply()
-  val db = driver.connection("localhost:27017").get.database("nezasa_dev")
-  val collection: Future[BSONCollection] = db.map(_.collection[BSONCollection]("iam.users"))
+  def db = driver.connection("localhost:27017").get.database("nezasa_dev")
+  def collection: Future[BSONCollection] = db.map(_.collection[BSONCollection]("iam.users"))
 
   "the instrumentation" should {
     "propagate the current context and generate a span inside a cursor headOption" in {
@@ -56,7 +57,7 @@ class WSInstrumentationSpec extends WordSpec with MustMatchers
 
       Kamon.withContext(create(Span.ContextKey, okSpan)) {
         val response = collection.flatMap(x => x.find(BSONDocument.empty).cursor().headOption)
-        response.futureValue mustBe defined
+        Await.result(response, Duration.Inf) mustBe defined
       }
 
       eventually(timeout(2 seconds)) {
@@ -75,7 +76,7 @@ class WSInstrumentationSpec extends WordSpec with MustMatchers
 
       Kamon.withContext(create(Span.ContextKey, okSpan)) {
         val response = collection.flatMap(x => x.find(BSONDocument.empty).cursor().collect[List](maxDocs = 1, err =Cursor.FailOnError[List[BSONDocument]]()))
-        response.futureValue.headOption mustBe defined
+        Await.result(response, Duration.Inf).headOption mustBe defined
       }
 
       eventually(timeout(2 seconds)) {
@@ -87,7 +88,7 @@ class WSInstrumentationSpec extends WordSpec with MustMatchers
       }
     }
 
-    "propagate the current context and generate a span inside a cursor foldResponses" ignore {
+    "propagate the current context and generate a span inside a cursor foldResponses" in {
       val okSpan = Kamon.buildSpan("chupa").start()
 
       Kamon.withContext(create(Span.ContextKey, okSpan)) {
