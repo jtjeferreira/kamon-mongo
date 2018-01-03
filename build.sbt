@@ -4,9 +4,9 @@ version := "1.0-SNAPSHOT"
 
 scalaVersion := "2.11.8"
 
-val kamonCore         = "io.kamon"                  %%  "kamon-core"            % "1.0.0-RC1"
-val kamonScala        = "io.kamon"                  %%  "kamon-scala"           % "1.0.0-RC2-23f93e2b7fa4b431136be5ab9d6fc0caceb2e13f"
-val kamonTestkit      = "io.kamon"                  %%  "kamon-testkit"         % "1.0.0-RC1"
+val kamonCore         = "io.kamon"                  %%  "kamon-core"            % "1.0.0-RC7"
+val kamonScala        = "io.kamon"                  %%  "kamon-scala-future"    % "1.0.0-RC7"
+val kamonTestkit      = "io.kamon"                  %%  "kamon-testkit"         % "1.0.0-RC7"
 
 val reactiveMongo     = "org.reactivemongo"         %%  "reactivemongo"         % "0.12.7"
 
