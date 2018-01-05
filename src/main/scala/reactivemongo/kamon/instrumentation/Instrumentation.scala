@@ -17,34 +17,35 @@
 package reactivemongo.kamon.instrumentation
 
 import kamon.Kamon
-import kamon.context.Key
 import kamon.mongo.ReactiveMongo
 import kamon.trace.{Span, SpanCustomizer}
 import kamon.util.CallingThreadExecutionContext
 import org.aspectj.lang.ProceedingJoinPoint
 import org.aspectj.lang.annotation.{Around, Aspect, Pointcut}
 import reactivemongo.api.commands.CommandWithResult
-import reactivemongo.api.{Collection, Cursor, FlattenedCursor, WrappedCursor}
+import reactivemongo.api.Collection
 
 import scala.concurrent.Future
 
 @Aspect
 class Instrumentation {
 
-  private object A {
-    private val keyName = "a"
-    val ContextKey: Key[A.type] = Key.local(keyName, null)
-  }
+  //minimal set of cursor operations (head or headOption or foldResponses or foldResponsesM)
+  @Pointcut("(" +
+    "execution(* reactivemongo.api.DefaultCursor.Impl.head(..)) || " +
+    "execution(* reactivemongo.api.DefaultCursor.Impl.headOption(..)) || " +
+    "execution(* reactivemongo.api.DefaultCursor.Impl.foldResponses(..)) ||" +
+    "execution(* reactivemongo.api.DefaultCursor.Impl.foldResponsesM(..))" +
+    ") && this(cursor)")
+  def onCursorMethods(cursor: reactivemongo.api.DefaultCursor.Impl[_]): Unit = {}
 
-  //cursor operations
-  @Pointcut("execution(scala.concurrent.Future reactivemongo.api.Cursor+.*(..)) && this(cursor)")
-  def onCursorMethodThatReturnsFuture(cursor: Cursor[_]): Unit = {}
-
-  @Around("onCursorMethodThatReturnsFuture(cursor)")
-  def aroundCursorMethodThatReturnsFuture(pjp: ProceedingJoinPoint, cursor: Cursor[_]): Any = {
-    val collectionName = cursorCollectionName(cursor)
+  @Around("onCursorMethods(cursor)")
+  def aroundCursorMethods(pjp: ProceedingJoinPoint, cursor: reactivemongo.api.DefaultCursor.Impl[_]): Any = {
+    val collectionName = cursor.fullCollectionName
     track(pjp, collectionName, ReactiveMongo.generateOperationName(cursor, collectionName))
   }
+
+  //TODO tag nextRequest and kill cursor
 
   //commands
   @Pointcut("execution(* reactivemongo.api.commands.Command.CommandWithPackRunner.apply(..)) && args(collection, command, ..)")
@@ -58,54 +59,39 @@ class Instrumentation {
 
   private def track(pjp: ProceedingJoinPoint, collectionName: String, generateOperationName: => String): Future[_] = {
     val currentContext = Kamon.currentContext()
-    val currentA = currentContext.get(A.ContextKey)
     val clientSpan = currentContext.get(Span.ContextKey)
 
-    if(currentA != null) {
-//      println(s"no A ${pjp.getSignature}")
-      pjp.proceed().asInstanceOf[Future[_]]
-    } else if (clientSpan.isEmpty()) {
+    if (clientSpan.isEmpty()) {
 //      println(s"no span ${pjp.getSignature}")
       pjp.proceed().asInstanceOf[Future[_]]
     }
     else {
-      Kamon.withContext(currentContext.withKey(A.ContextKey, A)) {
-//        println(s"before $collectionName ${pjp.getSignature}")
-        val clientSpanBuilder = Kamon.buildSpan(generateOperationName)
-          .asChildOf(clientSpan)
-          .withTag("span.kind", "client")
-          .withTag("component", "reactivemongo")
-          .withTag("reactivemongo.collection", collectionName)
+//      println(s"before $collectionName ${pjp.getSignature}")
+      val clientSpanBuilder = Kamon.buildSpan(generateOperationName)
+        .asChildOf(clientSpan)
+        .withTag("span.kind", "client")
+        .withTag("component", "reactivemongo")
+        .withTag("reactivemongo.collection", collectionName)
 
-        val clientRequestSpan = currentContext.get(SpanCustomizer.ContextKey)
-          .customize(clientSpanBuilder)
-          .start()
+      val clientRequestSpan = currentContext.get(SpanCustomizer.ContextKey)
+        .customize(clientSpanBuilder)
+        .start()
 
-        val responseFuture = pjp.proceed().asInstanceOf[Future[_]]
+      val responseFuture = pjp.proceed().asInstanceOf[Future[_]]
 
-        responseFuture.transform(
-          s = response => {
-//            println("after")
+      responseFuture.transform(
+        s = response => {
+//        println("after")
 
-            clientRequestSpan.finish()
-            response
-          },
-          f = error => {
-            clientRequestSpan.addError("error.object", error)
-            clientRequestSpan.finish()
-            error
-          }
-        )(CallingThreadExecutionContext)
-      }
-    }
-  }
-
-  @scala.annotation.tailrec
-  private def cursorCollectionName(cursor: Cursor[_]): String = {
-    cursor match {
-      case c: reactivemongo.api.DefaultCursor.Impl[_] => c.fullCollectionName
-      case f: FlattenedCursor[_] => "FlattenedCursor unknown collection"
-      case w: WrappedCursor[_] => cursorCollectionName(w.wrappee)
+          clientRequestSpan.finish()
+          response
+        },
+        f = error => {
+          clientRequestSpan.addError("error.object", error)
+          clientRequestSpan.finish()
+          error
+        }
+      )(CallingThreadExecutionContext)
     }
   }
 }
