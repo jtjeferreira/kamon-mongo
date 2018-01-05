@@ -2,7 +2,7 @@
 
 <aspectj>
   <aspects>
-    <aspect name="kamon.mongo.instrumentation.Instrumentation"/>
+    <aspect name="reactivemongo.kamon.instrumentation.Instrumentation"/>
   </aspects>
 
     <weaver options="-Xset:weaveJavaPackages=false,weaveJavaxPackages=false">

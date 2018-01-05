@@ -1,4 +1,4 @@
-package kamon.play
+package kamon.mongo
 
 import kamon.Kamon
 import kamon.testkit.{Reconfigure, TestSpanReporter}
