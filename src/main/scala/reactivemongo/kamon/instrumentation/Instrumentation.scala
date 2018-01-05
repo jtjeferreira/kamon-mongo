@@ -21,11 +21,12 @@ import kamon.mongo.ReactiveMongo
 import kamon.trace.{Span, SpanCustomizer}
 import kamon.util.CallingThreadExecutionContext
 import org.aspectj.lang.ProceedingJoinPoint
-import org.aspectj.lang.annotation.{Around, Aspect, Pointcut}
+import org.aspectj.lang.annotation.{Around, Aspect, Before, Pointcut}
 import reactivemongo.api.commands.CommandWithResult
 import reactivemongo.api.Collection
+import reactivemongo.core.protocol.Response
 
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 
 @Aspect
 class Instrumentation {
@@ -45,7 +46,25 @@ class Instrumentation {
     track(pjp, collectionName, ReactiveMongo.generateOperationName(cursor, collectionName))
   }
 
-  //TODO tag nextRequest and kill cursor
+  //mark current span when nextRequest happens
+  @Pointcut("execution(* reactivemongo.api.DefaultCursor.Impl.nextResponse(..)) && this(cursor)")
+  def onCursorNextResponse(cursor: reactivemongo.api.DefaultCursor.Impl[_]): Unit = {}
+
+  @Around("onCursorNextResponse(cursor)")
+  def aroundCursorNextResponse(pjp: ProceedingJoinPoint, cursor: reactivemongo.api.DefaultCursor.Impl[_]): Any = {
+    val function2 = pjp.proceed().asInstanceOf[(ExecutionContext, Response) => Future[Option[Response]]]
+    Function.untupled(function2.tupled.andThen{f => tag("nextRequest"); f})
+  }
+
+
+  //mark current span when kill happens
+  @Pointcut("execution(* reactivemongo.api.DefaultCursor.Impl.kill(..)) && this(cursor)")
+  def onCursorKill(cursor: reactivemongo.api.DefaultCursor.Impl[_]): Unit = {}
+
+  @Before("onCursorKill(cursor)")
+  def beforeCursorKill(cursor: reactivemongo.api.DefaultCursor.Impl[_]): Unit = {
+    tag("kill")
+  }
 
   //commands
   @Pointcut("execution(* reactivemongo.api.commands.Command.CommandWithPackRunner.apply(..)) && args(collection, command, ..)")
@@ -92,6 +111,17 @@ class Instrumentation {
           error
         }
       )(CallingThreadExecutionContext)
+    }
+  }
+
+  private def tag(tag: String): Unit = {
+//    println(s"tag $tag")
+    val currentContext = Kamon.currentContext()
+    val clientSpan = currentContext.get(Span.ContextKey)
+    if (clientSpan.isEmpty()) {
+//      println(s"no span when tagging")
+    } else {
+      clientSpan.mark(tag)
     }
   }
 }

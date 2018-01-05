@@ -6,6 +6,8 @@
         </encoder>
     </appender>
 
+    <logger name="reactivemongo" level="TRACE"></logger>
+
     <root level="INFO">
         <appender-ref ref="STDOUT"/>
     </root>

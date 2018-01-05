@@ -105,6 +105,31 @@ class InstrumentationSpec extends WordSpec with MustMatchers
         span.tags("span.kind") mustBe TagValue.String("client")
         span.tags("component") mustBe TagValue.String("reactivemongo")
         span.tags("reactivemongo.collection") mustBe TagValue.String("nezasa_dev.iam.users")
+
+//        span.marks.map(_.key) must contain("nextRequest") not working due to the kamon context not being propagated in reactivemongo.api.FoldResponses#!
+      }
+
+      reporter.nextSpan() mustBe empty
+    }
+
+    "propagate the current context and generate a span inside a cursor foldResponses with kill" in {
+      val okSpan = Kamon.buildSpan("chupa").start()
+
+      Kamon.withContext(create(Span.ContextKey, okSpan)) {
+        val response = collection.flatMap(x => x.find(BSONDocument.empty).cursor().foldResponses(List.empty[BSONDocument], maxDocs = -1){
+          case (docs, response) => Cursor.Done(docs ++ reactivemongo.core.protocol.Response.parse(response).toList)
+        })
+        response.futureValue.headOption mustBe defined
+      }
+
+      eventually(timeout(2 seconds)) {
+        val span = reporter.nextSpan().value
+        span.operationName mustBe "cursor_nezasa_dev.iam.users"
+        span.tags("span.kind") mustBe TagValue.String("client")
+        span.tags("component") mustBe TagValue.String("reactivemongo")
+        span.tags("reactivemongo.collection") mustBe TagValue.String("nezasa_dev.iam.users")
+
+        //        span.marks.map(_.key) must contain("kill") not working due to the kamon context not being propagated in reactivemongo.api.FoldResponses#!
       }
 
       reporter.nextSpan() mustBe empty
