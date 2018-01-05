@@ -19,7 +19,8 @@ package mongo
 
 import com.typesafe.config.Config
 import kamon.util.DynamicAccess
-import reactivemongo.api.Cursor
+import reactivemongo.api.commands.CommandWithResult
+import reactivemongo.api.{Collection, Cursor}
 
 object ReactiveMongo {
   @volatile private var nameGenerator: NameGenerator = new DefaultNameGenerator()
@@ -28,6 +29,9 @@ object ReactiveMongo {
 
   def generateOperationName(cursor: Cursor[_], collectionName: String): String =
     nameGenerator.generateOperationName(cursor, collectionName)
+
+  def generateOperationName(collection: Collection, command: CommandWithResult[_]): String =
+    nameGenerator.generateOperationName(collection, command)
 
   private def loadConfiguration(config: Config): Unit = {
     val dynamic = new DynamicAccess(getClass.getClassLoader)
@@ -43,8 +47,10 @@ object ReactiveMongo {
 
 trait NameGenerator {
   def generateOperationName(cursor: Cursor[_], collectionName: String): String
+  def generateOperationName(collection: Collection, command: CommandWithResult[_]): String
 }
 
 class DefaultNameGenerator extends NameGenerator {
   override def generateOperationName(cursor: Cursor[_], collectionName: String): String = s"cursor_$collectionName"
+  override def generateOperationName(collection: Collection, command: CommandWithResult[_]): String = s"${command.getClass.getSimpleName}_${collection.fullCollectionName}"
 }

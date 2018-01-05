@@ -23,8 +23,8 @@ import kamon.trace.{Span, SpanCustomizer}
 import kamon.util.CallingThreadExecutionContext
 import org.aspectj.lang.ProceedingJoinPoint
 import org.aspectj.lang.annotation.{Around, Aspect, Pointcut}
-import reactivemongo.api.collections.{GenericCollection, InsertOps}
-import reactivemongo.api.{Cursor, FlattenedCursor, SerializationPack, WrappedCursor}
+import reactivemongo.api.commands.CommandWithResult
+import reactivemongo.api.{Collection, Cursor, FlattenedCursor, WrappedCursor}
 
 import scala.concurrent.Future
 
@@ -46,14 +46,14 @@ class Instrumentation {
     track(pjp, collectionName, ReactiveMongo.generateOperationName(cursor, collectionName))
   }
 
-  //insert
-  @Pointcut("call(* reactivemongo.api.collections.InsertOps$InsertBuilder$class.*execute(..)) && args(insertBuilder, ..)")
-  def onInsertBuilderExecute[P <: SerializationPack with Singleton](insertBuilder: InsertOps[P]#InsertBuilder[_]): Unit = {}
+  //commands
+  @Pointcut("execution(* reactivemongo.api.commands.Command.CommandWithPackRunner.apply(..)) && args(collection, command, ..)")
+  def onCommandWithPackRunnerApply(collection: Collection, command: CommandWithResult[_]): Unit = {}
 
-  @Around("onInsertBuilderExecute(insertBuilder)")
-  def aroundInsertBuilderExecute[P <: SerializationPack with Singleton](pjp: ProceedingJoinPoint, insertBuilder: InsertOps[P]#InsertBuilder[_]): Any = {
-    val collectionName = insertBuilder.getClass().getDeclaredMethod("reactivemongo$api$collections$InsertOps$InsertBuilder$$$outer").invoke(insertBuilder).asInstanceOf[GenericCollection[_]].fullCollectionName
-    track(pjp, collectionName, s"insert_$collectionName" /* ReactiveMongo.generateOperationName(insertBuilder, collectionName)*/)
+  @Around("onCommandWithPackRunnerApply(collection, command)")
+  def aroundCommandWithPackRunnerApply(pjp: ProceedingJoinPoint, collection: Collection, command: CommandWithResult[_]): Any = {
+    val collectionName = collection.fullCollectionName
+    track(pjp, collectionName, ReactiveMongo.generateOperationName(collection, command))
   }
 
   private def track(pjp: ProceedingJoinPoint, collectionName: String, generateOperationName: => String): Future[_] = {

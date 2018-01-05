@@ -120,7 +120,26 @@ class InstrumentationSpec extends WordSpec with MustMatchers
 
       eventually(timeout(2 seconds)) {
         val span = reporter.nextSpan().value
-        span.operationName mustBe "insert_nezasa_dev.iam.users"
+        span.operationName mustBe "Insert_nezasa_dev.iam.users"
+        span.tags("span.kind") mustBe TagValue.String("client")
+        span.tags("component") mustBe TagValue.String("reactivemongo")
+        span.tags("reactivemongo.collection") mustBe TagValue.String("nezasa_dev.iam.users")
+      }
+
+      reporter.nextSpan() mustBe empty
+    }
+
+    "propagate the current context and generate a span inside an update" in {
+      val okSpan = Kamon.buildSpan("chupa").start()
+
+      Kamon.withContext(create(Span.ContextKey, okSpan)) {
+        val response = collection.flatMap(x => x.update(BSONDocument.empty, BSONDocument.empty)).map(_ => true).recover{case _ => false}
+        response.futureValue
+      }
+
+      eventually(timeout(2 seconds)) {
+        val span = reporter.nextSpan().value
+        span.operationName mustBe "Update_nezasa_dev.iam.users"
         span.tags("span.kind") mustBe TagValue.String("client")
         span.tags("component") mustBe TagValue.String("reactivemongo")
         span.tags("reactivemongo.collection") mustBe TagValue.String("nezasa_dev.iam.users")
