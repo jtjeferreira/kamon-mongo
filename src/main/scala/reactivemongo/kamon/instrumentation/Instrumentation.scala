@@ -23,7 +23,8 @@ import kamon.trace.{Span, SpanCustomizer}
 import kamon.util.CallingThreadExecutionContext
 import org.aspectj.lang.ProceedingJoinPoint
 import org.aspectj.lang.annotation.{Around, Aspect, Pointcut}
-import reactivemongo.api.{Cursor, FlattenedCursor, WrappedCursor}
+import reactivemongo.api.collections.{GenericCollection, InsertOps}
+import reactivemongo.api.{Cursor, FlattenedCursor, SerializationPack, WrappedCursor}
 
 import scala.concurrent.Future
 
@@ -35,15 +36,27 @@ class Instrumentation {
     val ContextKey: Key[A.type] = Key.local(keyName, null)
   }
 
+  //cursor operations
   @Pointcut("execution(scala.concurrent.Future reactivemongo.api.Cursor+.*(..)) && this(cursor)")
   def onCursorMethodThatReturnsFuture(cursor: Cursor[_]): Unit = {}
 
   @Around("onCursorMethodThatReturnsFuture(cursor)")
   def aroundCursorMethodThatReturnsFuture(pjp: ProceedingJoinPoint, cursor: Cursor[_]): Any = {
-    track(pjp, cursor)
+    val collectionName = cursorCollectionName(cursor)
+    track(pjp, collectionName, ReactiveMongo.generateOperationName(cursor, collectionName))
   }
 
-  private def track(pjp: ProceedingJoinPoint, cursor: Cursor[_]): Future[_] = {
+  //insert
+  @Pointcut("call(* reactivemongo.api.collections.InsertOps$InsertBuilder$class.*execute(..)) && args(insertBuilder, ..)")
+  def onInsertBuilderExecute[P <: SerializationPack with Singleton](insertBuilder: InsertOps[P]#InsertBuilder[_]): Unit = {}
+
+  @Around("onInsertBuilderExecute(insertBuilder)")
+  def aroundInsertBuilderExecute[P <: SerializationPack with Singleton](pjp: ProceedingJoinPoint, insertBuilder: InsertOps[P]#InsertBuilder[_]): Any = {
+    val collectionName = insertBuilder.getClass().getDeclaredMethod("reactivemongo$api$collections$InsertOps$InsertBuilder$$$outer").invoke(insertBuilder).asInstanceOf[GenericCollection[_]].fullCollectionName
+    track(pjp, collectionName, s"insert_$collectionName" /* ReactiveMongo.generateOperationName(insertBuilder, collectionName)*/)
+  }
+
+  private def track(pjp: ProceedingJoinPoint, collectionName: String, generateOperationName: => String): Future[_] = {
     val currentContext = Kamon.currentContext()
     val currentA = currentContext.get(A.ContextKey)
     val clientSpan = currentContext.get(Span.ContextKey)
@@ -57,9 +70,8 @@ class Instrumentation {
     }
     else {
       Kamon.withContext(currentContext.withKey(A.ContextKey, A)) {
-        val collectionName: String = cursorCollectionName(cursor)
 //        println(s"before $collectionName ${pjp.getSignature}")
-        val clientSpanBuilder = Kamon.buildSpan(ReactiveMongo.generateOperationName(cursor, collectionName))
+        val clientSpanBuilder = Kamon.buildSpan(generateOperationName)
           .asChildOf(clientSpan)
           .withTag("span.kind", "client")
           .withTag("component", "reactivemongo")
