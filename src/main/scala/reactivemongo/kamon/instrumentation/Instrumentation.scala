@@ -16,7 +16,9 @@
 
 package reactivemongo.kamon.instrumentation
 
+import akka.actor.Scheduler
 import kamon.Kamon
+import kamon.executors.util.ContinuationAwareRunnable
 import kamon.mongo.ReactiveMongo
 import kamon.trace.{Span, SpanCustomizer}
 import kamon.util.CallingThreadExecutionContext
@@ -26,6 +28,7 @@ import reactivemongo.api.commands.CommandWithResult
 import reactivemongo.api.Collection
 import reactivemongo.core.protocol.Response
 
+import scala.concurrent.duration.FiniteDuration
 import scala.concurrent.{ExecutionContext, Future}
 
 @Aspect
@@ -66,6 +69,15 @@ class Instrumentation {
     tag("kill")
   }
 
+  @Pointcut("call(* akka.actor.Scheduler+.scheduleOnce(..)) && target(scheduler) && args(delay, f, ec)")
+  def onSchedulerScheduleOnce(scheduler: Scheduler, delay: FiniteDuration, f: ⇒ Unit, ec: ExecutionContext): Unit = {}
+
+  @Around("onSchedulerScheduleOnce(scheduler, delay, f, ec)")
+  def aroundSchedulerScheduleOnce(pjp: ProceedingJoinPoint, scheduler: Scheduler, delay: FiniteDuration, f: ⇒ Unit, ec: ExecutionContext): Any = {
+    val runnable = new ContinuationAwareRunnable(new Runnable { override def run = f })
+    scheduler.scheduleOnce(delay, runnable)(ec)
+  }
+
   //commands
   @Pointcut("execution(* reactivemongo.api.commands.Command.CommandWithPackRunner.apply(..)) && args(collection, command, ..)")
   def onCommandWithPackRunnerApply(collection: Collection, command: CommandWithResult[_]): Unit = {}
@@ -96,11 +108,14 @@ class Instrumentation {
         .customize(clientSpanBuilder)
         .start()
 
+      val newContext = currentContext.withKey(Span.ContextKey, clientRequestSpan)
+      Kamon.storeContext(newContext) //storing the current context is important so that in other instrumentations the current Span is correct
+
       val responseFuture = pjp.proceed().asInstanceOf[Future[_]]
 
       responseFuture.transform(
         s = response => {
-//        println("after")
+//        println(s"after ${Kamon.currentContext()} ${Kamon.currentSpan()} $clientRequestSpan")
 
           clientRequestSpan.finish()
           response
@@ -121,6 +136,7 @@ class Instrumentation {
     if (clientSpan.isEmpty()) {
 //      println(s"no span when tagging")
     } else {
+//      println(s"tag $currentContext $clientSpan")
       clientSpan.mark(tag)
     }
   }

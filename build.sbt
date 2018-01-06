@@ -5,6 +5,7 @@ version := "1.0-SNAPSHOT"
 scalaVersion := "2.11.8"
 
 val kamonCore         = "io.kamon"                  %%  "kamon-core"            % "1.0.0-RC7"
+val kamonExecutors    = "io.kamon"                  %%  "kamon-executors"       % "1.0.0-RC7"
 val kamonScala        = "io.kamon"                  %%  "kamon-scala-future"    % "1.0.0-RC7"
 val kamonTestkit      = "io.kamon"                  %%  "kamon-testkit"         % "1.0.0-RC7"
 
@@ -20,9 +21,10 @@ lazy val root = Project("kamon-mongo", file("."))
     testGrouping in Test := singleTestPerJvm((definedTests in Test).value, (javaOptions in Test).value)))
   .settings(javaAgents += "org.aspectj" % "aspectjweaver"  % "1.8.10"  % "compile;test")
   .settings(resolvers += Resolver.bintrayRepo("kamon-io", "snapshots"))
+  //.settings(javaOptions in Test ++= Seq("-Xrunjdwp:transport=dt_socket,server=y,suspend=y,address=127.0.0.1:5005"))
   .settings(
     libraryDependencies ++=
-      compileScope(reactiveMongo, kamonCore, kamonScala) ++
+      compileScope(reactiveMongo, kamonCore, kamonExecutors, kamonScala) ++
         providedScope(aspectJ/*, typesafeConfig*/) ++
         testScope(kamonTestkit, logbackClassic))
 
