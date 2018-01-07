@@ -36,10 +36,10 @@ class Instrumentation {
 
   //minimal set of cursor operations (head or headOption or foldResponses or foldResponsesM)
   @Pointcut("(" +
-    "execution(* reactivemongo.api.DefaultCursor.Impl.head(..)) || " +
-    "execution(* reactivemongo.api.DefaultCursor.Impl.headOption(..)) || " +
-    "execution(* reactivemongo.api.DefaultCursor.Impl.foldResponses(..)) ||" +
-    "execution(* reactivemongo.api.DefaultCursor.Impl.foldResponsesM(..))" +
+    "execution(* reactivemongo.api.DefaultCursor$$anon$2.head(..)) || " +
+    "execution(* reactivemongo.api.DefaultCursor$$anon$2.headOption(..)) || " +
+    "execution(* reactivemongo.api.DefaultCursor$$anon$2.foldResponses(..)) ||" +
+    "execution(* reactivemongo.api.DefaultCursor$$anon$2.foldResponsesM(..))" +
     ") && this(cursor)")
   def onCursorMethods(cursor: reactivemongo.api.DefaultCursor.Impl[_]): Unit = {}
 
@@ -61,11 +61,14 @@ class Instrumentation {
 
 
   //mark current span when kill happens
-  @Pointcut("execution(* reactivemongo.api.DefaultCursor.Impl.class.reactivemongo$api$DefaultCursor$Impl$$killCursors(..))")
+  @Pointcut("" +
+    "execution(* reactivemongo.api.DefaultCursor.Impl.class.reactivemongo$api$DefaultCursor$Impl$$killCursors(..)) ||" + //scala 2.13
+    "execution(* reactivemongo.api.DefaultCursor$Impl.killCursors(..))") //scala 2.12
   def onCursorKill(): Unit = {}
 
   @Around("onCursorKill()")
   def beforeCursorKill(pjp: ProceedingJoinPoint): Any = {
+    println(pjp)
     tag("kill")
     pjp.proceed()
   }
