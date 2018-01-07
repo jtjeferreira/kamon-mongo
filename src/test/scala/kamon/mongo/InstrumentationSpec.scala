@@ -106,7 +106,7 @@ class InstrumentationSpec extends WordSpec with MustMatchers
         span.tags("component") mustBe TagValue.String("reactivemongo")
         span.tags("reactivemongo.collection") mustBe TagValue.String("nezasa_dev.iam.users")
 
-        span.marks.map(_.key) must contain("nextRequest") //not working due to the kamon context not being propagated in reactivemongo.api.FoldResponses#!
+        span.marks.map(_.key) must contain("nextRequest")
       }
 
       reporter.nextSpan() mustBe empty
@@ -129,7 +129,7 @@ class InstrumentationSpec extends WordSpec with MustMatchers
         span.tags("component") mustBe TagValue.String("reactivemongo")
         span.tags("reactivemongo.collection") mustBe TagValue.String("nezasa_dev.iam.users")
 
-        //        span.marks.map(_.key) must contain("kill") not working due to the kamon context not being propagated in reactivemongo.api.FoldResponses#!
+        span.marks.map(_.key) must contain("kill")
       }
 
       reporter.nextSpan() mustBe empty

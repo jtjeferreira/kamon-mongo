@@ -23,7 +23,7 @@ import kamon.mongo.ReactiveMongo
 import kamon.trace.{Span, SpanCustomizer}
 import kamon.util.CallingThreadExecutionContext
 import org.aspectj.lang.ProceedingJoinPoint
-import org.aspectj.lang.annotation.{Around, Aspect, Before, Pointcut}
+import org.aspectj.lang.annotation.{Around, Aspect, Pointcut}
 import reactivemongo.api.commands.CommandWithResult
 import reactivemongo.api.Collection
 import reactivemongo.core.protocol.Response
@@ -61,12 +61,13 @@ class Instrumentation {
 
 
   //mark current span when kill happens
-  @Pointcut("execution(* reactivemongo.api.DefaultCursor.Impl.kill(..)) && this(cursor)")
-  def onCursorKill(cursor: reactivemongo.api.DefaultCursor.Impl[_]): Unit = {}
+  @Pointcut("execution(* reactivemongo.api.DefaultCursor.Impl.class.reactivemongo$api$DefaultCursor$Impl$$killCursors(..))")
+  def onCursorKill(): Unit = {}
 
-  @Before("onCursorKill(cursor)")
-  def beforeCursorKill(cursor: reactivemongo.api.DefaultCursor.Impl[_]): Unit = {
+  @Around("onCursorKill()")
+  def beforeCursorKill(pjp: ProceedingJoinPoint): Any = {
     tag("kill")
+    pjp.proceed()
   }
 
   @Pointcut("call(* akka.actor.Scheduler+.scheduleOnce(..)) && target(scheduler) && args(delay, f, ec)")
@@ -74,7 +75,7 @@ class Instrumentation {
 
   @Around("onSchedulerScheduleOnce(scheduler, delay, f, ec)")
   def aroundSchedulerScheduleOnce(pjp: ProceedingJoinPoint, scheduler: Scheduler, delay: FiniteDuration, f: ⇒ Unit, ec: ExecutionContext): Any = {
-    val runnable = new ContinuationAwareRunnable(new Runnable { override def run = f })
+    val runnable = new ContinuationAwareRunnable(new Runnable { override def run() = f })
     scheduler.scheduleOnce(delay, runnable)(ec)
   }
 
