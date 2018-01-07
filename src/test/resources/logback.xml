@@ -6,7 +6,8 @@
         </encoder>
     </appender>
 
-    <logger name="reactivemongo" level="TRACE"></logger>
+    <logger name="reactivemongo" level="DEBUG"></logger>
+    <logger name="reactivemongo.api.Cursor" level="trace"></logger>
 
     <root level="INFO">
         <appender-ref ref="STDOUT"/>

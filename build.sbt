@@ -9,6 +9,9 @@ val kamonExecutors    = "io.kamon"                  %%  "kamon-executors"       
 val kamonScala        = "io.kamon"                  %%  "kamon-scala-future"    % "1.0.0-RC7"
 val kamonTestkit      = "io.kamon"                  %%  "kamon-testkit"         % "1.0.0-RC7"
 
+val dockerTestKit     = "com.whisk"                 %% "docker-testkit-scalatest" % "0.9.5"
+val dockerTestKitSpotify = "com.whisk"              %% "docker-testkit-impl-spotify" % "0.9.5"
+
 val reactiveMongo     = "org.reactivemongo"         %%  "reactivemongo"         % "0.12.7"
 
 lazy val root = Project("kamon-mongo", file("."))
@@ -25,8 +28,8 @@ lazy val root = Project("kamon-mongo", file("."))
   .settings(
     libraryDependencies ++=
       compileScope(reactiveMongo, kamonCore, kamonExecutors, kamonScala) ++
-        providedScope(aspectJ/*, typesafeConfig*/) ++
-        testScope(kamonTestkit, logbackClassic))
+        providedScope(aspectJ) ++
+        testScope(kamonTestkit, logbackClassic, dockerTestKit, dockerTestKitSpotify))
 
 
 import sbt.Tests._
