@@ -15,6 +15,8 @@
 
 package kamon.mongo
 
+import com.whisk.docker.impl.spotify.DockerKitSpotify
+import com.whisk.docker.scalatest.DockerTestKit
 import kamon.Kamon
 import kamon.context.Context.create
 import kamon.testkit._
@@ -26,7 +28,6 @@ import org.scalatest.{BeforeAndAfterAll, MustMatchers, OptionValues, WordSpec}
 import reactivemongo.api.collections.bson.BSONCollection
 import reactivemongo.bson.BSONDocument
 
-import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration.Duration
 import scala.concurrent.{Await, Future}
 
@@ -40,14 +41,25 @@ class InstrumentationSpec extends WordSpec with MustMatchers
   with MetricInspection
   with Reconfigure
   with OptionValues
-  with SpanReporter {
+  with SpanReporter
+  with DockerTestKit
+  with DockerKitSpotify
+  with DockerMongodbService {
 
   import reactivemongo.api._
 
   val driver = MongoDriver.apply()
-  val db = driver.connection("localhost:27017").get.database("nezasa_dev")
-  val collection: Future[BSONCollection] = db.map(_.collection[BSONCollection]("iam.users"))
-  val collectionName = "nezasa_dev.iam.users"
+  lazy val db = driver.connection("localhost:27017").get.database("test")
+  def collection: Future[BSONCollection] = db.map(_.collection[BSONCollection]("collection"))
+  def collectionName = "test.collection"
+
+  override def beforeAll(): Unit = {
+    super.beforeAll()
+
+    collection.flatMap { c =>
+      c.insert(BSONDocument("key" -> "value"))
+    }.futureValue
+  }
 
   "the instrumentation" should {
     "propagate the current context and generate a span inside a cursor headOption" in {
@@ -60,10 +72,10 @@ class InstrumentationSpec extends WordSpec with MustMatchers
 
       eventually(timeout(2 seconds)) {
         val span = reporter.nextSpan().value
-        span.operationName mustBe "cursor_nezasa_dev.iam.users"
+        span.operationName mustBe s"cursor_$collectionName"
         span.tags("span.kind") mustBe TagValue.String("client")
         span.tags("component") mustBe TagValue.String("reactivemongo")
-        span.tags("reactivemongo.collection") mustBe TagValue.String("nezasa_dev.iam.users")
+        span.tags("reactivemongo.collection") mustBe TagValue.String(collectionName)
       }
 
       reporter.nextSpan() mustBe empty
@@ -80,10 +92,10 @@ class InstrumentationSpec extends WordSpec with MustMatchers
 
       eventually(timeout(2 seconds)) {
         val span = reporter.nextSpan().value
-        span.operationName mustBe "cursor_nezasa_dev.iam.users"
+        span.operationName mustBe s"cursor_$collectionName"
         span.tags("span.kind") mustBe TagValue.String("client")
         span.tags("component") mustBe TagValue.String("reactivemongo")
-        span.tags("reactivemongo.collection") mustBe TagValue.String("nezasa_dev.iam.users")
+        span.tags("reactivemongo.collection") mustBe TagValue.String(collectionName)
       }
 
       reporter.nextSpan() mustBe empty
@@ -94,17 +106,17 @@ class InstrumentationSpec extends WordSpec with MustMatchers
 
       Kamon.withContext(create(Span.ContextKey, okSpan)) {
         val response = collection.flatMap(x => x.find(BSONDocument.empty).cursor().foldResponses(List.empty[BSONDocument], maxDocs = -1){
-          case (docs, response) => Cursor.Cont(docs ++ reactivemongo.core.protocol.Response.parse(response).toList)
+          case (docs, r) => Cursor.Cont(docs ++ reactivemongo.core.protocol.Response.parse(r).toList)
         })
         response.futureValue.headOption mustBe defined
       }
 
       eventually(timeout(2 seconds)) {
         val span = reporter.nextSpan().value
-        span.operationName mustBe "cursor_nezasa_dev.iam.users"
+        span.operationName mustBe s"cursor_$collectionName"
         span.tags("span.kind") mustBe TagValue.String("client")
         span.tags("component") mustBe TagValue.String("reactivemongo")
-        span.tags("reactivemongo.collection") mustBe TagValue.String("nezasa_dev.iam.users")
+        span.tags("reactivemongo.collection") mustBe TagValue.String(collectionName)
 
         span.marks.map(_.key) must contain("nextRequest")
       }
@@ -117,17 +129,17 @@ class InstrumentationSpec extends WordSpec with MustMatchers
 
       Kamon.withContext(create(Span.ContextKey, okSpan)) {
         val response = collection.flatMap(x => x.find(BSONDocument.empty).cursor().foldResponses(List.empty[BSONDocument], maxDocs = -1){
-          case (docs, response) => Cursor.Done(docs ++ reactivemongo.core.protocol.Response.parse(response).toList)
+          case (docs, r) => Cursor.Done(docs ++ reactivemongo.core.protocol.Response.parse(r).toList)
         })
         response.futureValue.headOption mustBe defined
       }
 
       eventually(timeout(2 seconds)) {
         val span = reporter.nextSpan().value
-        span.operationName mustBe "cursor_nezasa_dev.iam.users"
+        span.operationName mustBe s"cursor_$collectionName"
         span.tags("span.kind") mustBe TagValue.String("client")
         span.tags("component") mustBe TagValue.String("reactivemongo")
-        span.tags("reactivemongo.collection") mustBe TagValue.String("nezasa_dev.iam.users")
+        span.tags("reactivemongo.collection") mustBe TagValue.String(collectionName)
 
         span.marks.map(_.key) must contain("kill")
       }
@@ -145,10 +157,10 @@ class InstrumentationSpec extends WordSpec with MustMatchers
 
       eventually(timeout(2 seconds)) {
         val span = reporter.nextSpan().value
-        span.operationName mustBe "Insert_nezasa_dev.iam.users"
+        span.operationName mustBe s"Insert_$collectionName"
         span.tags("span.kind") mustBe TagValue.String("client")
         span.tags("component") mustBe TagValue.String("reactivemongo")
-        span.tags("reactivemongo.collection") mustBe TagValue.String("nezasa_dev.iam.users")
+        span.tags("reactivemongo.collection") mustBe TagValue.String(collectionName)
       }
 
       reporter.nextSpan() mustBe empty
@@ -164,10 +176,10 @@ class InstrumentationSpec extends WordSpec with MustMatchers
 
       eventually(timeout(2 seconds)) {
         val span = reporter.nextSpan().value
-        span.operationName mustBe "Update_nezasa_dev.iam.users"
+        span.operationName mustBe s"Update_$collectionName"
         span.tags("span.kind") mustBe TagValue.String("client")
         span.tags("component") mustBe TagValue.String("reactivemongo")
-        span.tags("reactivemongo.collection") mustBe TagValue.String("nezasa_dev.iam.users")
+        span.tags("reactivemongo.collection") mustBe TagValue.String(collectionName)
       }
 
       reporter.nextSpan() mustBe empty
