@@ -1,5 +1,6 @@
 Reactivemongo Integration  [![](https://jitpack.io/v/jtjeferreira/kamon-mongo.svg)](https://jitpack.io/#jtjeferreira/kamon-mongo)
 ==========================
+[![Build Status](https://travis-ci.org/jtjeferreira/kamon-mongo.svg?branch=master)](https://travis-ci.org/jtjeferreira/kamon-mongo)
 
 The `kamon-mongo` module brings bytecode instrumentation to trace the [reactivemongo](https://github.com/ReactiveMongo/ReactiveMongo) library
 
