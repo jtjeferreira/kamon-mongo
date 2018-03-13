@@ -106,10 +106,10 @@ class Instrumentation {
         .customize(clientSpanBuilder)
         .start()
 
-      val newContext = currentContext.withKey(Span.ContextKey, clientRequestSpan)
-      Kamon.storeContext(newContext) //storing the current context is important so that in other instrumentations the current Span is correct
-
-      val responseFuture = pjp.proceed().asInstanceOf[Future[_]]
+      //storing the current context is important so that in other instrumentations the current Span is correct
+      val responseFuture = Kamon.withContext(currentContext.withKey(Span.ContextKey, clientRequestSpan)) {
+        pjp.proceed().asInstanceOf[Future[_]]
+      }
 
       responseFuture.transform(
         s = response => {
