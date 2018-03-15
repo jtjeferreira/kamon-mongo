@@ -41,4 +41,3 @@ def singleTestPerJvm(tests: Seq[TestDefinition], jvmSettings: Seq[String]): Seq[
       runPolicy = SubProcess(ForkOptions(runJVMOptions = jvmSettings)))
   }
 
-enableProperCrossScalaVersionTasks
