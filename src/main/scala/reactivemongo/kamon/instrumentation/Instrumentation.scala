@@ -35,7 +35,7 @@ import scala.concurrent.{ExecutionContext, Future}
 class Instrumentation {
 
   //minimal set of cursor operations (head or headOption or foldResponses or foldResponsesM)
-  @Pointcut("(execution(* (reactivemongo.api.DefaultCursor$Impl+ && !reactivemongo.api.DefaultCursor$Impl).headOption(..)) || execution(* (reactivemongo.api.DefaultCursor$Impl+ && !reactivemongo.api.DefaultCursor$Impl).headOption(..)) || execution(* (reactivemongo.api.DefaultCursor$Impl+ && !reactivemongo.api.DefaultCursor$Impl).foldResponses(..)) || execution(* (reactivemongo.api.DefaultCursor$Impl+ && !reactivemongo.api.DefaultCursor$Impl).foldResponsesM(..))) && this(cursor)")
+  @Pointcut("(execution(* (reactivemongo.api.DefaultCursor$Impl+ && !reactivemongo.api.DefaultCursor$Impl).head(..)) || execution(* (reactivemongo.api.DefaultCursor$Impl+ && !reactivemongo.api.DefaultCursor$Impl).headOption(..)) || execution(* (reactivemongo.api.DefaultCursor$Impl+ && !reactivemongo.api.DefaultCursor$Impl).foldResponses(..)) || execution(* (reactivemongo.api.DefaultCursor$Impl+ && !reactivemongo.api.DefaultCursor$Impl).foldResponsesM(..))) && this(cursor)")
   def onCursorMethods(cursor: reactivemongo.api.DefaultCursor.Impl[_]): Unit = {}
 
   @Around("onCursorMethods(cursor)")

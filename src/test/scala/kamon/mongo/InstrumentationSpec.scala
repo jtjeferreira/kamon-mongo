@@ -82,6 +82,26 @@ class InstrumentationSpec extends WordSpec with MustMatchers
 
     }
 
+    "propagate the current context and generate a span inside a cursor head" in {
+      val okSpan = Kamon.buildSpan("chupa").start()
+
+      Kamon.withContext(create(Span.ContextKey, okSpan)) {
+        val response = collection.flatMap(x => x.find(BSONDocument.empty).cursor().head).map(Option.apply)
+        Await.result(response, Duration.Inf) mustBe defined
+      }
+
+      eventually(timeout(2 seconds)) {
+        val span = reporter.nextSpan().value
+        span.operationName mustBe s"cursor_$collectionName"
+        span.tags("span.kind") mustBe TagValue.String("client")
+        span.tags("component") mustBe TagValue.String("reactivemongo")
+        span.tags("reactivemongo.collection") mustBe TagValue.String(collectionName)
+      }
+
+      reporter.nextSpan() mustBe empty
+
+    }
+
     "propagate the current context and generate a span inside a cursor collect" in {
       val okSpan = Kamon.buildSpan("chupa").start()
 
