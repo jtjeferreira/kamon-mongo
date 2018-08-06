@@ -4,15 +4,15 @@ version := "1.0-SNAPSHOT"
 
 scalaVersion := "2.11.8"
 
-val kamonCore         = "io.kamon"                  %%  "kamon-core"            % "1.0.0-RC7"
-val kamonExecutors    = "io.kamon"                  %%  "kamon-executors"       % "1.0.0-RC7"
-val kamonScala        = "io.kamon"                  %%  "kamon-scala-future"    % "1.0.0-RC7"
-val kamonTestkit      = "io.kamon"                  %%  "kamon-testkit"         % "1.0.0-RC7"
+val kamonCore         = "io.kamon"                  %%  "kamon-core"            % "1.0.1"
+val kamonExecutors    = "io.kamon"                  %%  "kamon-executors"       % "1.0.1"
+val kamonScala        = "io.kamon"                  %%  "kamon-scala-future"    % "1.0.0"
+val kamonTestkit      = "io.kamon"                  %%  "kamon-testkit"         % "1.0.1"
 
 val dockerTestKit     = "com.whisk"                 %% "docker-testkit-scalatest" % "0.9.5"
 val dockerTestKitSpotify = "com.whisk"              %% "docker-testkit-impl-spotify" % "0.9.5"
 
-val reactiveMongo     = "org.reactivemongo"         %%  "reactivemongo"         % "0.12.7"
+val reactiveMongo     = "org.reactivemongo"         %%  "reactivemongo"         % "0.16.0"
 
 lazy val root = Project("kamon-mongo", file("."))
   .enablePlugins(JavaAgent)

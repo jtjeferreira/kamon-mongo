@@ -9,7 +9,7 @@ trait DockerMongodbService extends DockerKit {
   val mongodbContainer = DockerContainer("mongo:3.4")
     .withPorts(DefaultMongodbPort -> Some(DefaultMongodbPort))
     .withReadyChecker(DockerReadyChecker.LogLineContains("waiting for connections on port"))
-    .withCommand("mongod", "--nojournal", "--smallfiles", "--syncdelay", "0")
+    .withCommand("mongod", "--smallfiles", "--syncdelay", "0")
 
   abstract override def dockerContainers: List[DockerContainer] =
     mongodbContainer :: super.dockerContainers
