@@ -98,8 +98,8 @@ class Instrumentation {
 //      println(s"before $collectionName ${pjp.getSignature}")
       val clientSpanBuilder = Kamon.buildSpan(generateOperationName)
         .asChildOf(clientSpan)
-        .withTag("span.kind", "client")
-        .withTag("component", "reactivemongo")
+        .withMetricTag("span.kind", "client")
+        .withMetricTag("component", "reactivemongo")
         .withTag("reactivemongo.collection", collectionName)
 
       val clientRequestSpan = currentContext.get(SpanCustomizer.ContextKey)
