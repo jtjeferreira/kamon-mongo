@@ -49,7 +49,7 @@ class InstrumentationSpec extends WordSpec with MustMatchers
   import reactivemongo.api._
 
   val driver = MongoDriver.apply()
-  lazy val db = driver.connection("localhost:27017").get.database("test")
+  lazy val db = driver.connection("mongodb://localhost:27017").get.database("test")
   def collection: Future[BSONCollection] = db.map(_.collection[BSONCollection]("collection"))
   def collectionName = "test.collection"
 
