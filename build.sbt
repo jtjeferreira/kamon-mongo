@@ -12,7 +12,7 @@ val kamonTestkit      = "io.kamon"                  %%  "kamon-testkit"         
 val dockerTestKit     = "com.whisk"                 %% "docker-testkit-scalatest" % "0.9.5"
 val dockerTestKitSpotify = "com.whisk"              %% "docker-testkit-impl-spotify" % "0.9.5"
 
-val reactiveMongo     = "org.reactivemongo"         %%  "reactivemongo"         % "0.14.0"
+val reactiveMongo     = "org.reactivemongo"         %%  "reactivemongo"         % "0.15.0"
 
 lazy val root = Project("kamon-mongo", file("."))
   .enablePlugins(JavaAgent)
