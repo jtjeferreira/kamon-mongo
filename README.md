@@ -17,9 +17,9 @@ Kamon scala module is currently available for Scala 2.11 and 2.12.
 
 Supported releases and dependencies are shown below.
 
-| kamon      | status | jdk  | scala            
-|:----------:|:------:|:----:|------------------
-|  0.0.1 |   RC   | 1.8+ | 2.11, 2.12
+| kamon-mongo | reactivemongo | status | jdk  | scala            
+|:-----------:|:-------------:|:------:|:----:|------
+|  0.0.1 | 0.12 until 0.16 | stable  | 1.8+ | 2.11, 2.12
 
 
 To get started with SBT, simply add the following to your `build.sbt` file:
