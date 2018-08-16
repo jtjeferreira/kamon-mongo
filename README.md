@@ -19,14 +19,14 @@ Supported releases and dependencies are shown below.
 
 | kamon-mongo | reactivemongo | status | jdk  | scala            
 |:-----------:|:-------------:|:------:|:----:|------
-|  0.0.1 | 0.12 until 0.16 | stable  | 1.8+ | 2.11, 2.12
+|  0.0.4 | 0.12 until 0.16 | stable  | 1.8+ | 2.11, 2.12
 
 
 To get started with SBT, simply add the following to your `build.sbt` file:
 
 ```scala
 resolvers += "jitpack" at "https://jitpack.io"
-libraryDependencies += "com.github.jtjeferreira" % "kamon-mongo" % "0.0.1"
+libraryDependencies += "com.github.jtjeferreira" %% "kamon-mongo" % "0.0.4"
 ```
 
 ### Metrics ###
